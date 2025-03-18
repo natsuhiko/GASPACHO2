@@ -1,0 +1,35 @@
+CC=/path/to/your/g++
+NVCC=/path/to/your/nvcc
+
+CFLAGS=-std=c++11 -I/path/to/your/gsl-2.8/include
+LDFLAGS=-L/path/to/your/gsl-2.8/lib -lz -lgsl -lgslcblas
+NVCCFLAGS=-g --compiler-bindir=$(CC) -I/path/to/your/gsl-2.8/include -arch=sm_60  
+
+SRCDIR=src
+SRCS=$(shell find $(SRCDIR) -name '*.cu' -o -name '*.c')
+OBJDIR=objs
+OBJS=$(subst $(SRCDIR),$(OBJDIR), $(SRCS))
+OBJS:=$(subst .cu,.o,$(OBJS))
+OBJS:=$(subst .c,.o,$(OBJS))
+OBJS:=$(subst objs/initX.o,,$(OBJS))
+OBJS:=$(subst objs/reg.o,,$(OBJS))
+OBJS:=$(subst objs/reg0.o,,$(OBJS))
+OBJS:=$(subst objs/ggplvm_de.o,,$(OBJS))
+OBJS:=$(subst objs/ggplvm_delta.o,,$(OBJS))
+TARGET=ggplvm_h100
+
+
+$(TARGET): $(OBJS)
+	$(NVCC) $(NVCCFLAGS) $(LDFLAGS) $+ -o $@
+
+$(OBJDIR)/%.o: $(SRCDIR)/%.cu
+	[ -d $(OBJDIR) ] || mkdir $(OBJDIR)
+	$(NVCC) $(NVCCFLAGS) $< -dc -o $@
+
+$(OBJDIR)/%.o: $(SRCDIR)/%.c
+	[ -d $(OBJDIR) ] || mkdir $(OBJDIR)
+	$(CC) $(CFLAGS) $< -c -o $@
+
+clean:
+	rm -rf $(OBJS)
+	rm -rf $(TARGET)
